@@ -75,34 +75,39 @@ async function init() {
 function renderManualEntry() {
   mainElement.classList.remove('loading');
   mainElement.innerHTML = `
-    <div class="result-container">
+    <div class="result-container manual-entry-view">
       <div class="verdict-box">
-        <h1 class="decision" style="color: var(--color-accent); font-size: 4rem;">ZIP CODE?</h1>
-        <p class="flavor-text">Our magic eye is blurry. Where are you?</p>
+        <h1 class="decision" style="color: var(--color-accent); font-size: 3.5rem; letter-spacing: 0.1em;">LOCATION?</h1>
+        <p class="flavor-text" style="opacity: 0.7; margin-bottom: 2rem;">The sensors can't see through the fog. Help us out.</p>
       </div>
       
-      <div class="zip-form-container">
+      <div class="zip-form-container" style="max-width: 320px; margin: 0 auto;">
         <form class="zip-form" id="manual-zip-form">
-          <div class="zip-input-group">
-            <input type="text" id="zip-input" class="zip-input" placeholder="Enter 5-digit ZIP" maxlength="5" pattern="[0-9]*" inputmode="numeric">
-            <button type="submit" class="zip-submit">SNIFF</button>
+          <div class="zip-input-group" style="padding: 0.25rem;">
+            <input type="text" id="zip-input" class="zip-input" placeholder="Enter ZIP Code" maxlength="5" pattern="[0-9]*" inputmode="numeric" autofocus>
+            <button type="submit" class="zip-submit" style="border-radius: 14px;">GO</button>
           </div>
         </form>
+        <p style="font-size: 0.7rem; color: var(--color-text-dim); margin-top: 1.5rem; text-transform: uppercase; letter-spacing: 0.1em;">Ad-blockers may be interfering with auto-sensing.</p>
       </div>
     </div>
   `;
 
-  document.getElementById('manual-zip-form')?.addEventListener('submit', handleZipSubmit);
+  document.getElementById('manual-zip-form')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const zip = document.getElementById('zip-input').value;
+    handleZipSubmitManual(zip);
+  });
 }
 
 function renderError(message) {
   mainElement.classList.remove('loading');
   mainElement.innerHTML = `
     <div class="result-container error-state">
-      <h1 class="decision no">HICCUP</h1>
+      <h1 class="decision no" style="font-size: 4rem;">MISS</h1>
       <p class="flavor-text">${message}</p>
       
-      <div class="zip-form-container">
+      <div class="zip-form-container" style="max-width: 320px; margin: 0 auto;">
         <form class="zip-form" id="manual-zip-form-retry">
           <div class="zip-input-group">
             <input type="text" id="zip-input-retry" class="zip-input" placeholder="Try another ZIP" maxlength="5" pattern="[0-9]*" inputmode="numeric">
