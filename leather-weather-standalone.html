@@ -39,7 +39,7 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            overflow: hidden;
+            overflow-x: hidden;
             position: relative;
         }
 
@@ -511,38 +511,34 @@
             return list[Math.floor(Math.random() * list.length)];
         }
 
-        async function init() {
+        async function getCoordsFromIP() {
             try {
-                const position = await getPosition();
-                const { latitude, longitude } = position.coords;
-
-                await new Promise(r => setTimeout(r, 1500));
-
-                const [weather, locationName] = await Promise.all([
-                    getWeather(latitude, longitude),
-                    getLocationName(latitude, longitude)
-                ]);
-
-                renderDecision(weather, locationName);
-            } catch (error) {
-                console.error(error);
-                renderError(error.message || "The sensors are clogged with lint.");
+                const response = await fetch('https://ipapi.co/json/');
+                if (!response.ok) throw new Error();
+                const data = await response.json();
+                return {
+                    latitude: data.latitude,
+                    longitude: data.longitude,
+                    locationName: `${data.city}, ${data.region_code}`
+                };
+            } catch (e) {
+                throw new Error("IP sensing failed");
             }
         }
 
-        function getPosition() {
-            return new Promise((resolve, reject) => {
-                if (!navigator.geolocation) {
-                    reject(new Error("Your browser is too old for this wisdom."));
-                }
-                navigator.geolocation.getCurrentPosition(resolve, (err) => {
-                    if (err.code === 1) {
-                        reject(new Error("Permission denied. We can't sniff the air if you're holding your nose!"));
-                    } else {
-                        reject(new Error("Lost signal. Is there a giant magnet nearby?"));
-                    }
-                });
-            });
+        async function init() {
+            const delay = new Promise(r => setTimeout(r, 1500));
+
+            try {
+                const ipLocation = await getCoordsFromIP();
+                await delay;
+                const weather = await getWeather(ipLocation.latitude, ipLocation.longitude);
+                renderDecision(weather, ipLocation.locationName);
+            } catch (error) {
+                console.log("IP sensing failed, falling back to manual entry");
+                await delay;
+                renderManualEntry();
+            }
         }
 
         async function getWeather(lat, lon) {
@@ -551,17 +547,6 @@
             if (!response.ok) throw new Error("The weather gods are offline.");
             const data = await response.json();
             return data.current;
-        }
-
-        async function getLocationName(lat, lon) {
-            try {
-                const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10`;
-                const response = await fetch(url);
-                const data = await response.json();
-                return data.address.city || data.address.town || data.address.village || "Unknown Territory";
-            } catch (e) {
-                return "The Wilds";
-            }
         }
 
         function getDecision(weather) {
@@ -618,6 +603,29 @@
             });
         }
 
+        function renderManualEntry() {
+            mainElement.classList.remove('loading');
+            mainElement.innerHTML = `
+          <div class="result-container">
+            <div class="verdict-box">
+              <h1 class="decision" style="color: var(--color-accent); font-size: 4rem;">ZIP CODE?</h1>
+              <p class="flavor-text">Our magic eye is blurry. Where are you?</p>
+            </div>
+            
+            <div class="zip-form-container">
+              <form class="zip-form" id="manual-zip-form">
+                <div class="zip-input-group">
+                  <input type="text" id="zip-input" class="zip-input" placeholder="Enter 5-digit ZIP" maxlength="5" pattern="[0-9]*" inputmode="numeric">
+                  <button type="submit" class="zip-submit">SNIFF</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        `;
+
+            document.getElementById('manual-zip-form')?.addEventListener('submit', handleZipSubmit);
+        }
+
         async function getCoordsFromZip(zip) {
             try {
                 const url = `https://api.zippopotam.us/us/${zip}`;
@@ -634,18 +642,12 @@
             }
         }
 
-        async function handleZipSubmit(e) {
-            e.preventDefault();
-            const zipInput = document.getElementById('zip-input');
-            const zip = zipInput.value.trim();
-
-            if (!zip || !/^\d{5}$/.test(zip)) {
-                alert("Please enter a valid 5-digit ZIP code.");
+        async function handleZipSubmitManual(zip) {
+            if (!/^\d{5}$/.test(zip)) {
+                alert("Invalid ZIP.");
                 return;
             }
-
-            showLoading("Sensing via ZIP code...");
-
+            showLoading("Sensing...");
             try {
                 const { latitude, longitude, locationName } = await getCoordsFromZip(zip);
                 const weather = await getWeather(latitude, longitude);
@@ -653,6 +655,12 @@
             } catch (error) {
                 renderError(error.message);
             }
+        }
+
+        async function handleZipSubmit(e) {
+            e.preventDefault();
+            const zip = document.getElementById('zip-input').value;
+            handleZipSubmitManual(zip);
         }
 
         function showLoading(text) {
@@ -670,8 +678,6 @@
         }
 
         function renderError(message) {
-            const isPermissionError = message.includes("Permission denied");
-
             mainElement.classList.remove('loading');
             mainElement.innerHTML = `
           <div class="result-container error-state">
@@ -679,10 +685,9 @@
             <p class="flavor-text">${message}</p>
             
             <div class="zip-form-container">
-              <p class="sensing-text">Or just type your ZIP code below:</p>
-              <form class="zip-form" id="manual-zip-form">
+              <form class="zip-form" id="manual-zip-form-retry">
                 <div class="zip-input-group">
-                  <input type="text" id="zip-input" class="zip-input" placeholder="Enter ZIP (e.g. 90210)" maxlength="5" pattern="[0-9]*" inputmode="numeric">
+                  <input type="text" id="zip-input-retry" class="zip-input" placeholder="Try another ZIP" maxlength="5" pattern="[0-9]*" inputmode="numeric">
                   <button type="submit" class="zip-submit">GO</button>
                 </div>
               </form>
@@ -690,21 +695,18 @@
 
             <div class="or-divider">OR</div>
             
-            <button class="action-btn" id="retry">Try Auto-Sensing Again</button>
-
-            ${isPermissionError ? `
-              <div class="rationale" style="margin-top: 2rem;">
-                <strong>Pro Tip</strong>
-                <p>Click the 🔒 icon in your browser's address bar and set Location to "Allow" to enable automatic sensing.</p>
-              </div>
-            ` : ''}
+            <button class="action-btn" id="retry">Re-calibrate Sensors</button>
           </div>
         `;
 
-            document.getElementById('manual-zip-form')?.addEventListener('submit', handleZipSubmit);
+            document.getElementById('manual-zip-form-retry')?.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const zip = document.getElementById('zip-input-retry').value;
+                handleZipSubmitManual(zip);
+            });
 
             document.getElementById('retry')?.addEventListener('click', () => {
-                showLoading("Attempting re-sync...");
+                showLoading("Re-syncing...");
                 init();
             });
         }
