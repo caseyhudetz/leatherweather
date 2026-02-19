@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Leather Weather - Should you wear leather today?</title>
+  <meta name="description"
+    content="A whimsical app that tells you if it's appropriate to wear leather based on your local weather." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;700;900&display=swap" rel="stylesheet">
+</head>
+
+<body>
+  <div id="app">
+    <header>
+      <div class="logo">
+        LEATHER<span>WEATHER</span>
+      </div>
+    </header>
+
+    <main id="main-content" class="loading">
+      <div class="loader-container">
+        <div class="leather-orb">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round" style="color: var(--color-accent); opacity: 0.8;">
+            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+          </svg>
+        </div>
+        <div class="sensing-text">Sensing your climate...</div>
+      </div>
+    </main>
+
+    <footer>
+      &copy; 2026 LEATHER WEATHER • NO COWS WERE HARMED IN THE MAKING OF THIS APP
+    </footer>
+  </div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+
+</html>
